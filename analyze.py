@@ -1,140 +1,85 @@
 import tweepy
-import pytesseract
-import requests
-
-from PIL import Image
 import re
-from bs4 import BeautifulSoup
-from selenium import webdriver
-from selenium.webdriver.chrome.service import Service as ChromeService
-from webdriver_manager.chrome import ChromeDriverManager
 import time
 import openai
+from bs4 import BeautifulSoup
+from selenium import webdriver
+from webdriver_manager.chrome import ChromeDriverManager
+import os
+from dotenv import load_dotenv
 
-
-
-client = tweepy.Client("TWITTER_KEY_V2")
-
-
-# Get comments on a tweet
-tweet_id = input("Tweet Id: ")
-
-comments = []
-
-
-    
-
-
-def getComments(url):
- 
- options = webdriver.ChromeOptions()
- options.add_argument('--disable-extensions')
- options.add_argument('--headless')
- user_agent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.116 Safari/537.36'
- options.add_argument(f'user-agent={user_agent}')
+load_dotenv()
 
 
 
 
-
- browser = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()))
-
- # open tweet's page
- browser.get(url)
- time.sleep(3)
- SCROLL_PAUSE_TIME = 0.5
- scroll_threshold = 7
- scroll = 0 
-# Get scroll height
- last_height = browser.execute_script("return document.body.scrollHeight")
-
- while True:
-    if scroll>scroll_threshold:
-        break    
-    # Scroll down to bottom
-    browser.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-
-    # Wait to load page
-    time.sleep(1)
-    soup = BeautifulSoup(browser.page_source, "html.parser")
-
-    # find comments
-    _comments = soup.find_all("div", {"class": "css-901oao r-1nao33i r-37j5jr r-a023e6 r-16dba41 r-rjixqe r-bcqeeo r-bnwqim r-qvutc0"})
-
-# print comments
-    for comment in _comments:
-     if comment not in comments:
-      comments.append(comment.text)
-      print(comment.text)
-    #time.sleep(SCROLL_PAUSE_TIME)
-
-    # Calculate new scroll height and compare with last scroll height
-    new_height = browser.execute_script("return document.body.scrollHeight")
-    
-    last_height = new_height
-    scroll = scroll+1
-    
- 
-
-
-# parse HTML content with BeautifulSoup
- soup = BeautifulSoup(browser.page_source, "html.parser")
-
-# find comments
- _comments = soup.find_all("div", {"class": "css-901oao r-1nao33i r-37j5jr r-a023e6 r-16dba41 r-rjixqe r-bcqeeo r-bnwqim r-qvutc0"})
-
-# print comments
- for comment in _comments:
-    if comment not in comments:
-     comments.append(comment.text)
-     print(comment.text)
-
-# close chromium browser
- browser.close()
-
-
-getComments("https://twitter.com/Toprak_MCSG/status/"+tweet_id)
-
-
-
-
-
+def get_comments(browser, url):
+    scroll_threshold = 7
+    scroll = 0 
+    browser.get(url)
+    time.sleep(3)
+    comments = []
+    while True:
+        if scroll>scroll_threshold:
+            break  
+        soup = BeautifulSoup(browser.page_source, "html.parser")
+        new_comments = soup.find_all("div", {"class": "css-901oao r-1nao33i r-37j5jr r-a023e6 r-16dba41 r-rjixqe r-bcqeeo r-bnwqim r-qvutc0"})
+        if not new_comments:
+            break
+        for comment in new_comments:
+         if comment.text not in comments:
+          comments.append(comment.text)
+        browser.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+        scroll = scroll+1
+        time.sleep(1)
+    #print(comments)
+    browser.close()    
+    return comments
 
 def preprocess_comment(comment):
-    # Lowercase
     comment = comment.lower()
-    # Remove URLs
     comment = re.sub(r'http\S+', '', comment)
-    # Remove special characters
     comment = re.sub(r'[^\w\s]', '', comment)
     return comment
 
-preprocessed_comments = [preprocess_comment(comment) for comment in comments]
+def main():
+    tweet_id = input("Tweet Id: ")
+    tweet_url = f"https://twitter.com/MonsterBudsNFT/status/{tweet_id}"
+    options = webdriver.ChromeOptions()
+    
+    browser = webdriver.Chrome(ChromeDriverManager().install())
+
+    comments = get_comments(browser, tweet_url)
+    preprocessed_comments = [preprocess_comment(c) for c in comments]
+    print(preprocessed_comments)
+
+    api_key = os.environ.get("TWITTER_API_KEY")
+    api_secret = os.environ.get("TWITTER_API_SECRET")
+    client = tweepy.Client(os.environ.get("TWITTER_KEY_V2"))
+    tweet = client.get_tweet(tweet_id, expansions=None, media_fields=None, place_fields=None, poll_fields=None, tweet_fields=None, user_fields=None, user_auth=False).data
+    openai.api_key = os.environ.get("OPENAI_KEY")
+    image_text = ""
+    # Use the concatenated text as the prompt
+    response = openai.Completion.create(
+     engine="text-davinci-003",
+     prompt=f"Analyse comments of the main tweet,make inferences and write a text that explains the general idea of all comments, step by step. If main tweet has a image,you will get 'image-to-text' converted string. If main tweet doesn't contains a image you will get blank string. Respond with main tweet's language. Text Of Main Tweet's Image : '{image_text}' Main Tweet: '{tweet}'.Comments are seperated with '' chracter. Comments: '{preprocessed_comments}'.",
+     max_tokens=1024,
+     n=1,
+     stop=None,
+     temperature=0.5,
+ )
+    generated_response = response.choices[0].text
+    prompt=f"Analyse comments of the main tweet,make inferences and write a text that explains the general idea of all comments, step by step. If main tweet has a image,you will get 'image-to-text' converted string. If main tweet doesn't contains a image you will get blank string. Text Of Main Tweet's Image : '{image_text}' Main Tweet: '{tweet}'. Respond with main tweet's language. Comments are seperated with '' chracter. Comments: '{preprocessed_comments}'.",
+    print(prompt)
+    print(generated_response)
+    # Image recognition code here
+
+    
+
+if __name__ == "__main__":
+    main()
 
 
-tweet = client.get_tweet(tweet_id, expansions=None, media_fields=None, place_fields=None, poll_fields=None, tweet_fields=None, user_fields=None, user_auth=False).data
-image_text = ""
-# Check if the tweet has an image
-#if "media" in status.entities:
-#    media_url = status.entities["media"][0]["media_url_https"]
-#    image = Image.open(requests.get(media_url, stream=True).raw)
-#    image_text = pytesseract.image_to_string(image)
-
-
-openai.api_key = "openai_key"
-# Use the concatenated text as the prompt
-response = openai.Completion.create(
-    engine="text-davinci-002",
-    prompt=f"Analyse comments of the main tweet,make inferences and write a text that explains the general idea of all comments, step by step. If main tweet has a image,you will get 'image-to-text' converted string. If main tweet doesn't contains a image you will get blank string. Respond with main tweet's language. Text Of Main Tweet's Image : '{image_text}' Main Tweet: '{tweet}'.Comments are seperated with '' chracter. Comments: '{preprocessed_comments}'.",
-    max_tokens=1024,
-    n=1,
-    stop=None,
-    temperature=0.5,
-)
-generated_response = response.choices[0].text
-prompt=f"Analyse comments of the main tweet,make inferences and write a text that explains the general idea of all comments. If main tweet has a image,you will get 'image-to-text' converted string. If main tweet doesn't contains a image you will get blank string. Text Of Main Tweet's Image : '{image_text}' Main Tweet: '{tweet}'. Respond with main tweet's language. Comments are seperated with '' chracter. Comments: '{preprocessed_comments}'.",
-print(prompt)
-print(generated_response)
 
 
 
