@@ -1,6 +1,10 @@
 # Twitter Comment Analyzer
 Are you tired of reading through endless comments on Twitter to find out what people are saying? Look no further! Our Twitter Comment Analyzer uses cutting-edge AI technology to analyze comments on a specific tweet and generate a comprehensive summary.
 
+
+https://user-images.githubusercontent.com/40343443/215698367-8aae6a0c-eaec-4b62-8de0-1c6dc8638495.mp4
+
+
 Here's how it works:
 
 1. First, enter the tweet ID of the tweet you want to analyze.
