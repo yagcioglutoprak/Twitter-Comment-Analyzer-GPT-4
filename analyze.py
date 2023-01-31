@@ -62,15 +62,14 @@ def main():
     # Use the concatenated text as the prompt
     response = openai.Completion.create(
      engine="text-davinci-003",
-     prompt=f"Analyse comments of the main tweet,make inferences and write a text that explains the general idea of all comments, step by step. If main tweet has a image,you will get 'image-to-text' converted string. If main tweet doesn't contains a image you will get blank string. Respond with main tweet's language. Text Of Main Tweet's Image : '{image_text}' Main Tweet: '{tweet}'.Comments are seperated with '' chracter. Comments: '{preprocessed_comments}'.",
+     prompt=f"Analyse comments of the main tweet,make inferences and write a text that explains the general idea of all comments, step by step. Also,write general emotion and the rate by '%' end of the line. If main tweet has a image,you will get 'image-to-text' converted string. If main tweet doesn't contains a image you will get blank string. Respond with main tweet's language. Text Of Main Tweet's Image : '{image_text}' Main Tweet: '{tweet}'.Comments are seperated with '' chracter. Comments: '{preprocessed_comments}'.",
      max_tokens=1024,
      n=1,
      stop=None,
      temperature=0.5,
  )
     generated_response = response.choices[0].text
-    prompt=f"Analyse comments of the main tweet,make inferences and write a text that explains the general idea of all comments, step by step. If main tweet has a image,you will get 'image-to-text' converted string. If main tweet doesn't contains a image you will get blank string. Text Of Main Tweet's Image : '{image_text}' Main Tweet: '{tweet}'. Respond with main tweet's language. Comments are seperated with '' chracter. Comments: '{preprocessed_comments}'.",
-    print(prompt)
+    prompt=f"Analyse comments of the main tweet,make inferences and write a text that explains the general idea of all comments, step by step. Also,write general emotion and the rate by '%' end of the line. If main tweet has a image,you will get 'image-to-text' converted string. If main tweet doesn't contains a image you will get blank string. Respond with main tweet's language. Text Of Main Tweet's Image : '{image_text}' Main Tweet: '{tweet}'.Comments are seperated with '' chracter. Comments: '{preprocessed_comments}'.",    print(prompt)
     print(generated_response)
     # Image recognition code here
 
