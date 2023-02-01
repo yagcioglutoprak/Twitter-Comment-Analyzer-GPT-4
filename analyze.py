@@ -13,11 +13,12 @@ from dotenv import load_dotenv
 import requests
 import pytesseract
 import cv2
-import numpy as np
+import numpy as np 
+from pyChatGPT import ChatGPT
 
 
 load_dotenv()
-
+use_unofficial_api = False
 
 
 def extract_text_from_url(url):
@@ -70,6 +71,7 @@ def get_comments(browser, url):
     except:
 
      print("No media found.")
+    token_size = 0 
     while True:
         if scroll>scroll_threshold:
             break  
@@ -79,7 +81,14 @@ def get_comments(browser, url):
             break
         for comment in new_comments:
          if comment.text not in comments:
+          comment_size = len(comment.text.split(" "))
+          print(token_size)
+          if (token_size + comment_size) > 800:
+            break      
           comments.append(comment.text)
+          token_size += comment_size
+          if (token_size + comment_size) > 800:
+            break  
         browser.execute_script("window.scrollTo(0, document.body.scrollHeight);")
         scroll = scroll+1
         time.sleep(1)
@@ -110,21 +119,28 @@ def main():
     tweet = client.get_tweet(tweet_id, expansions=None, media_fields=None, place_fields=None, poll_fields=None, tweet_fields=None, user_fields=None, user_auth=False).data
 
     openai.api_key = os.environ.get("OPENAI_KEY")
-    
+    if use_unofficial_api == False:
     # Use the concatenated text as the prompt
-    response = openai.Completion.create(
+     response = openai.Completion.create(
      engine="text-davinci-003",
-     prompt=f"Analyse comments of the main tweet,make inferences and write a text that explains the general idea of all comments, step by step. Also,write general emotion and the rate by '%' end of the line. If main tweet has a image,you will get 'image-to-text' converted string. If main tweet doesn't contains a image you will get blank string. Respond with main tweet's language. Text Of Main Tweet's Image : '{media_url}'. Main Tweet: '{tweet}'. Comments are seperated with '' chracter. Comments: '{preprocessed_comments}'.",
-     max_tokens=1024,
+     prompt=f"Analyse comments of the main tweet,make inferences and write a text that explains the general idea of all comments, step by step. Also,write general emotion and the rate by '%' end of the line. If main tweet has a image,you will get 'image-to-text' converted string. If main tweet doesn't contains a image you will get blank string. Answer with main tweet's language. Text Of Main Tweet's Image : '{media_url}'. Main Tweet: '{tweet}'. Comments are seperated with '' chracter. Comments: '{preprocessed_comments}'.",
+     max_tokens=500,
      n=1,
      stop=None,
-     temperature=0,
+     temperature=0.5,
  )
-    generated_response = response.choices[0].text
-    prompt=f"Analyse comments of the main tweet,make inferences and write a text that explains the general idea of all comments, step by step. Also,write general emotion and the rate by '%' end of the line. If main tweet has a image,you will get 'image-to-text' converted string. If main tweet doesn't contains a image you will get blank string. Respond with main tweet's language. Text Of Main Tweet's Image : '{media_url}'. Main Tweet: '{tweet}'. Comments are seperated with '' chracter. Comments: '{preprocessed_comments}'.",
-    print(prompt)
-    print(generated_response)
+     generated_response = response.choices[0].text
+     prompt=f"Analyse comments of the main tweet,make inferences and write a text that explains the general idea of all comments, step by step. Also,write general emotion and the rate by '%' end of the line. If main tweet has a image,you will get 'image-to-text' converted string. If main tweet doesn't contains a image you will get blank string. Answer with main tweet's language. Text Of Main Tweet's Image : '{media_url}'. Main Tweet: '{tweet}'. Comments are seperated with '' chracter. Comments: '{preprocessed_comments}'.",
+     #print(prompt)
+     print(generated_response)
     # Image recognition code here
+    else:
+     session = os.environ.get("CHATGPT_SESSION")
+     api = ChatGPT(session,moderation=False)
+     prompt=f"Analyse comments of the main tweet,make inferences and write a text that explains the general idea of all comments, step by step. Also,write general emotion and the rate by '%' end of the line. If main tweet has a image,you will get 'image-to-text' converted string. If main tweet doesn't contains a image you will get blank string. Answer with main tweet's language. Text Of Main Tweet's Image : '{media_url}'. Main Tweet: '{tweet}'. Comments are seperated with '' chracter. Comments: '{preprocessed_comments}'.",
+     resp = api.send_message(prompt)
+     #print(prompt)
+     print(resp['message'])
 
     
 
