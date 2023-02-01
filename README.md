@@ -13,6 +13,8 @@ Here's how it works:
 4. The preprocessed comments are then fed into OpenAI's language model, where it generates a text that explains the general idea of all the comments.
 5. And voila! You now have a summarized version of all the comments on the tweet.
 
+*Note: If the main tweet has an image, our script also uses image recognition to generate a text representation of the image. The text representation is then included in the prompt to OpenAI, providing additional context for the summary.
+
 
 ## Prerequisites
 - Install the required packages by running `pip install tweepy re time openai bs4 selenium webdriver_manager dotenv`
