@@ -15,7 +15,7 @@ Here's how it works:
 
 *Note: If the main tweet has an image, our script also uses image recognition to generate a text representation of the image. The text representation is then included in the prompt to OpenAI, providing additional context for the summary.
 
-*Exciting update: Script now has the option to use ChatGPT via "use_chatgpt" variable. Set to true for NLP analysis with ChatGPT, false for analysis with GPT-3 (text-davinci-003). More versatility and enhanced capabilities with this added feature.
+*Exciting update: Script now has the option to use ChatGPT via "use_unofficial_api" variable. Set to true for NLP analysis with ChatGPT, false for analysis with GPT-3 (text-davinci-003). More versatility and enhanced capabilities with this added feature.
 
 
 ## Prerequisites
