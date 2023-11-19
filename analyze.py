@@ -21,22 +21,25 @@ load_dotenv()
 use_unofficial_api = False
 
 
-def extract_text_from_url(url):
-    # fetch the image from the URL
-    response = requests.get(url)
-    image = np.asarray(bytearray(response.content), dtype="uint8")
-    image = cv2.imdecode(image, cv2.IMREAD_GRAYSCALE)
-    
-    # perform OCR on the image using Tesseract
-    text = pytesseract.image_to_string(image)
-    
-    # preprocess the text
-    text = text.lower()
-    text = text.strip()
-    text = text.replace("\n", " ")
-    
-    return text
+def analyze_image_with_vision_api(image_url):
+    """
+    Analyze an image using GPT-4 Vision API to understand what it contains.
+    """
+    response = openai.ChatCompletion.create(
+        model="gpt-4-vision-preview",  # Assuming this is the model for the GPT-4 vision tasks
+        messages=[
+            {
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": "What’s in this image?"},
+                    {"type": "image_url", "image_url": {"url": image_url}},
+                ],
+            }
+        ],
+        max_tokens=300,
+    )
 
+    return response.choices[0]['message']['content']
 
 def get_comments(browser, url):
     scroll_threshold = 7
@@ -61,7 +64,7 @@ def get_comments(browser, url):
 
         # Check if the URL contains "media" text
         if "media" in media_url:
-            media_url = extract_text_from_url(media_url)
+            media_url = analyze_image_with_vision_api(media_url)
             print(media_url)
             break
         else:
@@ -120,20 +123,20 @@ def main():
 
     openai.api_key = os.environ.get("OPENAI_KEY")
     if use_unofficial_api == False:
-    # Use the concatenated text as the prompt
-     response = openai.Completion.create(
-     engine="text-davinci-003",
-     prompt=f"Analyse comments of the main tweet,make inferences and write a text that explains the general idea of all comments, step by step. Also,write general emotion and the rate by '%' end of the line. If main tweet has a image,you will get 'image-to-text' converted string. If main tweet doesn't contains a image you will get blank string. Answer with main tweet's language. Text Of Main Tweet's Image : '{media_url}'. Main Tweet: '{tweet}'. Comments are seperated with '' chracter. Comments: '{preprocessed_comments}'.",
-     max_tokens=500,
-     n=1,
-     stop=None,
-     temperature=0.5,
- )
-     generated_response = response.choices[0].text
-     prompt=f"Analyse comments of the main tweet,make inferences and write a text that explains the general idea of all comments, step by step. Also,write general emotion and the rate by '%' end of the line. If main tweet has a image,you will get 'image-to-text' converted string. If main tweet doesn't contains a image you will get blank string. Answer with main tweet's language. Text Of Main Tweet's Image : '{media_url}'. Main Tweet: '{tweet}'. Comments are seperated with '' chracter. Comments: '{preprocessed_comments}'.",
-     #print(prompt)
+        # Create a list of messages for the conversation history
+     conversation = [
+        {"role": "system", "content": "You are a helpful assistant analyzing tweet comments."},
+        {"role": "user", "content": f"Analyse comments of the main tweet, make inferences and write a text that explains the general idea of all comments. Emphasize the general emotion and rate it by percentage at the end. If the main tweet has an image, provide a text version. Answer in the tweet's language. Main Tweet's Image Text: '{media_url}'. Main Tweet: '{tweet}'. Comments: '{preprocessed_comments}'."}
+     ]
+
+     response = openai.ChatCompletion.create(
+        model="gpt-4-1106-preview",
+        messages=conversation
+     )
+     generated_response = response['choices'][0]['message']['content']
+
      print(generated_response)
-    # Image recognition code here
+    
     else:
      session = os.environ.get("CHATGPT_SESSION")
      api = ChatGPT(session,moderation=False)
